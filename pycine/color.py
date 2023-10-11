@@ -2,22 +2,28 @@ import cv2
 import numpy as np
 
 
-def color_pipeline(raw, setup, bpp=12):
-    print(
-        "WARNING: The color pipeline implementation is incomplete "
-        "and will most likely not output the colors you expect!"
-    )
+def color_pipeline(raw, setup, bpp=12, print_debug=False):
+    if print_debug:
+        print(
+            "WARNING: The color pipeline implementation is incomplete "
+            "and will most likely not output the colors you expect!"
+        )
 
     """Order from:
     http://www.visionresearch.com/phantomzone/viewtopic.php?f=20&t=572#p3884
     """
+
     # 1. Offset the raw image by the amount in flare
-    print("fFlare: ", setup.fFlare)
+    if print_debug:
+        print("fFlare: ", setup.fFlare)
 
     # 2. White balance the raw picture using the white balance component of cmatrix
     white_balance, color_matrix = decompose_cmatrix(np.asarray(setup.cmCalib).reshape((3, 3)))
     BayerPatterns = {3: "gbrg", 4: "rggb"}
-    pattern = BayerPatterns[setup.CFA]
+    try:
+        pattern = BayerPatterns[setup.CFA]
+    except:
+        pattern = BayerPatterns[3]
     raw = whitebalance_raw(raw.astype(np.float32), white_balance, pattern).astype(np.uint16)
 
     # 3. Debayer the image
@@ -35,32 +41,40 @@ def color_pipeline(raw, setup, bpp=12):
     # rgb_image = np.dot(rgb_image, cmUser.T)
 
     # 6. Offset the image by the amount in offset
-    print("fOffset: ", setup.fOffset)
+    if print_debug:
+        print("fOffset: ", setup.fOffset)
 
     # 7. Apply the global gain
-    print("fGain: ", setup.fGain)
+    if print_debug:
+        print("fGain: ", setup.fGain)
 
     # 8. Apply the per-component gains red, green, blue
-    print("fGainR, fGainG, fGainB: ", setup.fGainR, setup.fGainG, setup.fGainB)
+    if print_debug:
+        print("fGainR, fGainG, fGainB: ", setup.fGainR, setup.fGainG, setup.fGainB)
 
     # 9. Apply the gamma curves; the green channel uses gamma, red uses gamma + rgamma and blue uses gamma + bgamma
-    print("fGamma, fGammaR, fGammaB: ", setup.fGamma, setup.fGammaR, setup.fGammaB)
+    if print_debug:
+        print("fGamma, fGammaR, fGammaB: ", setup.fGamma, setup.fGammaR, setup.fGammaB)
     rgb_image = apply_gamma(rgb_image, setup)
 
     # 10. Apply the tone curve to each of the red, green, blue channels
     fTone = np.asarray(setup.fTone)
-    print(setup.ToneLabel, setup.TonePoints, fTone)
+    if print_debug:
+        print(setup.ToneLabel, setup.TonePoints, fTone)
 
     # 11. Add the pedestals to each color channel, and linearly rescale to keep the white point the same.
-    print("fPedestalR, fPedestalG, fPedestalB: ", setup.fPedestalR, setup.fPedestalG, setup.fPedestalB)
+    if print_debug:
+        print("fPedestalR, fPedestalG, fPedestalB: ", setup.fPedestalR, setup.fPedestalG, setup.fPedestalB)
 
     # 12. Convert to YCrCb using REC709 coefficients
 
     # 13. Scale the Cr and Cb components by chroma.
-    print("fChroma: ", setup.fChroma)
+    if print_debug:
+        print("fChroma: ", setup.fChroma)
 
     # 14. Rotate the Cr and Cb components around the origin in the CrCb plane by hue degrees.
-    print("fHue: ", setup.fHue)
+    if print_debug:
+        print("fHue: ", setup.fHue)
 
     return (rgb_image * (2 ** bpp - 1)).astype(np.uint16)
 
